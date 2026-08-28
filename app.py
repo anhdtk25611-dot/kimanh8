@@ -19,6 +19,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 
 # Thử import thư viện confluent_kafka (nếu môi trường có cài đặt)
 try:
@@ -77,33 +78,6 @@ st.markdown("""
         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         text-align: center;
     }
-    .metric-title {
-        font-size: 0.8rem;
-        color: #6c757d;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .metric-value {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #212529;
-        margin-top: 4px;
-    }
-    
-    /* Thẻ cảm xúc (Sentiment Badges) */
-    .badge-sentiment {
-        display: inline-block;
-        padding: 5px 12px;
-        border-radius: 12px;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-    .badge-very-positive { background-color: #a3cfbb; color: #052c11; }
-    .badge-positive { background-color: #d1e7dd; color: #0f5132; }
-    .badge-neutral { background-color: #e2e3e5; color: #41464b; }
-    .badge-negative { background-color: #f8d7da; color: #842029; }
-    .badge-very-negative { background-color: #f1aeb5; color: #58151c; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -167,16 +141,16 @@ def analyze_sentiment(text: str, rating: float):
     # Gán nhãn và mã màu tương ứng
     if effective_sentiment == 'positive':
         if rating >= 4.5:
-            return 'Rất tích cực', '#052c11', '#a3cfbb', 'badge-very-positive'
+            return 'Rất tích cực', '#052c11', '#a3cfbb'
         else:
-            return 'Tích cực', '#0f5132', '#d1e7dd', 'badge-positive'
+            return 'Tích cực', '#0f5132', '#d1e7dd'
     elif effective_sentiment == 'negative':
         if rating <= 1.5:
-            return 'Rất tiêu cực', '#58151c', '#f1aeb5', 'badge-very-negative'
+            return 'Rất tiêu cực', '#58151c', '#f1aeb5'
         else:
-            return 'Tiêu cực', '#842029', '#f8d7da', 'badge-negative'
+            return 'Tiêu cực', '#842029', '#f8d7da'
     else:
-        return 'Trung lập', '#41464b', '#e2e3e5', 'badge-neutral'
+        return 'Trung lập', '#41464b', '#e2e3e5'
 
 # ------------------------------------------------------------------------------
 # 3. QUẢN LÝ SESSION STATE
@@ -323,39 +297,73 @@ def render_dashboard_content(records, stats):
 
     # 2. Hiển thị chi tiết biểu đồ và bảng dữ liệu
     with dashboard_placeholder.container():
-        col_left, col_right = st.columns([1.3, 1.0])
+        col_left, col_right = st.columns([1.35, 1.0])
         
         with col_left:
             st.subheader("📋 7 Đánh giá thời trang gần nhất")
             if records:
                 recent_records = records[-7:][::-1]
-                table_html = """
-                <table style="width:100%; border-collapse: collapse; font-size: 0.92rem;">
-                    <thead>
-                        <tr style="background-color: #212529; color: #ffffff; text-align: left;">
-                            <th style="padding: 10px; width: 22%; text-align: center;">Điểm Rating</th>
-                            <th style="padding: 10px; width: 48%;">Nội dung phản hồi</th>
-                            <th style="padding: 10px; width: 30%; text-align: center;">Cảm xúc (AI)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                """
+                
+                # Tạo HTML bảng an toàn và cô lập hoàn toàn bằng components.html
+                rows_code = ""
                 for r in recent_records:
-                    stars = "⭐" * max(1, min(5, int(round(r['amazon_rating']))))
-                    table_html += f"""
-                    <tr style="border-bottom: 1px solid #dee2e6; background-color: #ffffff;">
-                        <td style="padding: 10px; text-align: center; font-weight: 700;">
-                            {r['amazon_rating']:.1f} / 5.0<br>
-                            <span style="font-size: 0.8rem; color: #f39c12;">{stars}</span>
+                    rating_val = r['amazon_rating']
+                    stars = "⭐" * max(1, min(5, int(round(rating_val))))
+                    title_clean = str(r['title']).replace('<', '&lt;').replace('>', '&gt;')
+                    emotion_val = r['emotion']
+                    bg_col = r.get('b_color', '#d1e7dd')
+                    txt_col = r.get('t_color', '#0f5132')
+                    
+                    rows_code += f"""
+                    <tr style="border-bottom: 1px solid #e9ecef;">
+                        <td style="padding: 10px 8px; text-align: center; font-weight: 700; width: 22%; font-size: 13px;">
+                            {rating_val:.1f} / 5.0<br>
+                            <span style="font-size: 11px; color: #f39c12;">{stars}</span>
                         </td>
-                        <td style="padding: 10px; color: #333333;">{r['title']}</td>
-                        <td style="padding: 10px; text-align: center;">
-                            <span class="badge-sentiment {r['badge_class']}">{r['emotion']}</span>
+                        <td style="padding: 10px 12px; color: #2b2f33; width: 48%; font-size: 13px; line-height: 1.4;">
+                            {title_clean}
+                        </td>
+                        <td style="padding: 10px 8px; text-align: center; width: 30%;">
+                            <span style="background-color: {bg_col}; color: {txt_col}; padding: 4px 10px; border-radius: 12px; font-weight: 600; font-size: 12px; display: inline-block;">
+                                {emotion_val}
+                            </span>
                         </td>
                     </tr>
                     """
-                table_html += "</tbody></table>"
-                st.markdown(table_html, unsafe_allow_html=True)
+                
+                table_frame_html = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                <meta charset="utf-8">
+                <style>
+                    body {{ margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: transparent; }}
+                    .table-box {{ width: 100%; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 1px 4px rgba(0,0,0,0.03); }}
+                    table {{ width: 100%; border-collapse: collapse; }}
+                    th {{ background-color: #212529; color: #ffffff; padding: 10px 8px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }}
+                </style>
+                </head>
+                <body>
+                    <div class="table-box">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 22%; text-align: center;">Điểm Rating</th>
+                                    <th style="width: 48%; text-align: left; padding-left: 12px;">Nội dung phản hồi</th>
+                                    <th style="width: 30%; text-align: center;">Cảm xúc (AI)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {rows_code}
+                            </tbody>
+                        </table>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                # Render an toàn 100% bằng iframe component
+                components.html(table_frame_html, height=360, scrolling=True)
             else:
                 st.info("Chưa có dữ liệu nào được truyền vào. Hãy bấm **▶ Bắt đầu** ở thanh bên trái.")
 
@@ -503,14 +511,15 @@ if st.session_state.streaming_active:
             if not text:
                 text = str(record.get('summary', 'Sản phẩm thời trang tiêu chuẩn'))
                 
-            emotion_text, text_col, bg_col, badge_cls = analyze_sentiment(text, rating)
+            emotion_text, text_col, bg_col = analyze_sentiment(text, rating)
             
             event = {
                 'run_id': run_id,
                 'amazon_rating': rating,
                 'title': text,
                 'emotion': emotion_text,
-                'badge_class': badge_cls,
+                'b_color': bg_col,
+                't_color': text_col,
                 'timestamp': datetime.now().strftime("%H:%M:%S")
             }
             
@@ -534,13 +543,14 @@ if st.session_state.streaming_active:
                 break
             rating = float(r.get('overall', 5.0))
             text = r.get('reviewText', '')
-            emotion_text, text_col, bg_col, badge_cls = analyze_sentiment(text, rating)
+            emotion_text, text_col, bg_col = analyze_sentiment(text, rating)
             event = {
                 'run_id': run_id,
                 'amazon_rating': rating,
                 'title': text,
                 'emotion': emotion_text,
-                'badge_class': badge_cls,
+                'b_color': bg_col,
+                't_color': text_col,
                 'timestamp': datetime.now().strftime("%H:%M:%S")
             }
             st.session_state.data_records.append(event)
@@ -549,3 +559,5 @@ if st.session_state.streaming_active:
             st.session_state.stats["consumed"] += 1
             render_dashboard_content(st.session_state.data_records, st.session_state.stats)
             time.sleep(stream_delay if stream_delay > 0 else 0.1)
+
+
