@@ -1,0 +1,17 @@
+# Thư viện giao diện Web & Trực quan hóa
+streamlit>=1.35.0
+plotly>=5.20.0
+matplotlib>=3.8.0
+
+# Xử lý dữ liệu
+pandas>=2.2.0
+numpy>=1.26.0
+requests>=2.31.0
+certifi>=2024.2.2
+
+# Trí tuệ nhân tạo & Phân tích cảm xúc (NLP)
+torch>=2.2.0
+transformers>=4.40.0
+
+# Big Data Streaming (Kafka / OCI Streaming)
+confluent-kafka>=2.3.0
